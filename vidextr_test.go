@@ -1,4 +1,4 @@
-package videoparse
+package vidextr
 
 import (
 	"fmt"
