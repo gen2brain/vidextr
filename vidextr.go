@@ -1,22 +1,23 @@
 package vidextr
 
 import (
-	"time"
+	"encoding/json"
+	"net/url"
 	"regexp"
 	"strings"
-	"net/url"
-	"encoding/json"
+	"time"
 
 	goreq "github.com/franela/goreq"
 )
 
+var userAgent string = "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:25.0) Gecko/20100101 Firefox/25.0"
 
 func YouTube(id string) (string, error) {
 	res, err := goreq.Request{
 		Uri:          "http://www.youtube.com/get_video_info?video_id=" + id + "&el=detailpage&ps=default",
 		Timeout:      5 * time.Second,
 		MaxRedirects: 1,
-		UserAgent:    "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:25.0) Gecko/20100101 Firefox/25.0",
+		UserAgent:    userAgent,
 	}.Do()
 
 	if err != nil {
@@ -54,13 +55,12 @@ func YouTube(id string) (string, error) {
 	return url, nil
 }
 
-
 func DailyMotion(id string) (string, error) {
 	res, err := goreq.Request{
 		Uri:          "http://dailymotion.com/embed/video/" + id,
 		Timeout:      5 * time.Second,
 		MaxRedirects: 1,
-		UserAgent:    "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:25.0) Gecko/20100101 Firefox/25.0",
+		UserAgent:    userAgent,
 	}.Do()
 
 	if err != nil {
@@ -87,13 +87,12 @@ func DailyMotion(id string) (string, error) {
 	return "", nil
 }
 
-
 func Vimeo(id string) (string, error) {
 	res, err := goreq.Request{
 		Uri:          "http://player.vimeo.com/video/" + id,
 		Timeout:      5 * time.Second,
 		MaxRedirects: 1,
-		UserAgent:    "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:25.0) Gecko/20100101 Firefox/25.0",
+		UserAgent:    userAgent,
 	}.Do()
 
 	if err != nil {
@@ -120,6 +119,43 @@ func Vimeo(id string) (string, error) {
 			url := sd["url"].(string)
 			return url, nil
 		}
+	}
+
+	return "", nil
+}
+
+func VK(url string) (string, error) {
+	res, err := goreq.Request{
+		Uri:          url,
+		Timeout:      5 * time.Second,
+		MaxRedirects: 1,
+		UserAgent:    userAgent,
+	}.Do()
+
+	if err != nil {
+		return "", err
+	}
+
+	body, _ := res.Body.ToString()
+	reVK := regexp.MustCompile(`(?m)var vars = ({.*?})\nvar `)
+
+	re := reVK.FindAllStringSubmatch(body, -1)
+	if len(re) > 0 {
+		info := re[0][1]
+
+		var data map[string]interface{}
+		err = json.Unmarshal([]byte(info), &data)
+
+		if err != nil {
+			return "", err
+		}
+
+		url := data["url480"].(string)
+		if url == "" {
+			url = data["url360"].(string)
+		}
+
+		return url, nil
 	}
 
 	return "", nil
