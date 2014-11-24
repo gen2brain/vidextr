@@ -150,9 +150,12 @@ func VK(url string) (string, error) {
 			return "", err
 		}
 
-		url := data["url480"].(string)
-		if url == "" {
-			url = data["url360"].(string)
+		url, ok := data["url480"].(string)
+		if !ok {
+			url, ok = data["url360"].(string)
+			if !ok {
+				return "", nil
+			}
 		}
 
 		return url, nil
