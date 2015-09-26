@@ -3,17 +3,16 @@ package vidextr
 import (
 	"crypto/tls"
 	"encoding/json"
+	"io/ioutil"
+	"net"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
 	"time"
-
-	"io/ioutil"
-	"net"
-	"net/http"
 )
 
-var userAgent string = "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:25.0) Gecko/20100101 Firefox/25.0"
+const userAgent string = "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:25.0) Gecko/20100101 Firefox/25.0"
 
 func httpRequest(uri string, method string) (*http.Response, error) {
 	timeout := time.Duration(6 * time.Second)
@@ -59,36 +58,29 @@ func YouTube(id string) (string, error) {
 		return "", err
 	}
 
-	body, _ := ioutil.ReadAll(res.Body)
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return "", err
+	}
 	defer res.Body.Close()
 
-	getItems := func(query string) map[string]string {
-		items := make(map[string]string)
-		s := strings.Split(query, "&")
-		for _, item := range s {
-			m := strings.Split(item, "=")
-			v, _ := url.QueryUnescape(m[1])
-			items[m[0]] = v
-		}
-		return items
+	items, err := url.ParseQuery(string(body[:]))
+	if err != nil {
+		return "", err
 	}
 
-	getUrl := func(query string) string {
-		s := strings.Split(query, "&")
-		for _, item := range s {
-			m := strings.Split(item, "=")
-			if m[0] == "url" {
-				v, _ := url.QueryUnescape(m[1])
-				return v
-			}
-		}
-		return ""
+	streamMap, err := url.ParseQuery(items.Get("url_encoded_fmt_stream_map"))
+	if err != nil {
+		return "", err
 	}
 
-	items := getItems(string(body[:]))
-	u := getUrl(items["url_encoded_fmt_stream_map"])
+	uri := streamMap.Get("url")
+	uri, err = url.QueryUnescape(uri)
+	if err != nil {
+		return "", err
+	}
 
-	return u, nil
+	return uri, nil
 }
 
 func DailyMotion(id string) (string, error) {
@@ -98,7 +90,10 @@ func DailyMotion(id string) (string, error) {
 		return "", err
 	}
 
-	body, _ := ioutil.ReadAll(res.Body)
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return "", err
+	}
 	defer res.Body.Close()
 
 	reDM := regexp.MustCompile(`(?mU)mp4","url":"(.*)"`)
@@ -126,7 +121,10 @@ func Vimeo(id string) (string, error) {
 		return "", err
 	}
 
-	body, _ := ioutil.ReadAll(res.Body)
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return "", err
+	}
 	defer res.Body.Close()
 
 	reVM := regexp.MustCompile(`var t=({.*?});`)
