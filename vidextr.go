@@ -3,6 +3,7 @@ package vidextr
 import (
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -45,7 +46,7 @@ func httpRequest(uri string, method string) (*http.Response, error) {
 	}
 
 	if res.StatusCode != 200 {
-		return nil, nil
+		return nil, errors.New(fmt.Sprintf("Status Code %d received", res.StatusCode))
 	}
 
 	return res, nil
